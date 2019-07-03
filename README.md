@@ -5,7 +5,7 @@ A Netsuite client-side script that allows you to perform searches without blocki
 
 ## Why use this script?
 
-Running searches on client side scripts in Netsuite using `nlapiCreateSearch` can be a big pain, because they block the UI.  This script allows you to write searches without blocking the user's actions.
+Running searches on client side scripts in Netsuite using `nlapiCreateSearch` can be hard, because they block the UI.  This script allows you to write searches without blocking the user's actions.
 
 This script does so by taking advantage of *iframes*.  This is a better approach than using a *faceless Suitelet* because searches act slightly differently when run in a server-side script.
 
