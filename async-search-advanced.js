@@ -195,7 +195,7 @@ var async_search = function()
                     {
                         //get a slice from beginning to end
                         var begin = major_index * 1000;
-                        var end = major_index * 1000 + 999
+                        var end = major_index * 1000 + 1000
 
                         //in the iframe, create a variable for the searchtype, filters, and columns
                         frame.contentWindow.eval('var searchtype = "'+ type +'"');
