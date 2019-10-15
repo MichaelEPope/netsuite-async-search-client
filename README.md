@@ -5,79 +5,216 @@ A Netsuite client-side script that allows you to perform searches without blocki
 
 ## Why use this script?
 
-Running searches on client side scripts in Netsuite using `nlapiCreateSearch` can be hard, because they block the UI.  This script allows you to write searches without blocking the user's actions.
+In Netsuite, running searches in client side scripts using `nlapiCreateSearch()` can be a problem.  Becuase the searhes are blocking, the UI freezes up and your coworkers will complain.
 
-This script does so by taking advantage of *iframes*.  This is a better approach than using a *faceless Suitelet* because searches act slightly differently when run in a server-side script.
+Recently, Netsuite realeased Suitescript 2.0, which contained the capability to run asynchrnous searches.  This script brings the functionality you see in Suitescript 2.0 into Suitescript 1.0, so you can have awesome asynchronous searches and pretty looking code.
+
+## How does it work?
+
+It's not very well known but it is possible to call Suitescript 2.0 methods from Suitescript 1.0.  This script wraps certain pieces of the Suitescript 2.0 API and also creates some helper functions to make things a bit less of a pain.  It's not perfect, but it's pretty good.
+
+This is a better approach than using a *faceless Suitelet* because searches act slightly differently when run in a server side script.
 
 ## Usage
 
+This is just a small sample of what can be done.  Take a look at the full API below.
+
 ```javascript
-    var search = async_search.createSearch('transaction');
-    search.addFilter('type', undefined, 'anyof', ['WorkOrd']);
-    search.addColumn('tranid', 'createdfrom');
-    //get the first nlobjResult in the search
-    search.getNext(function(error, result)
+    //get a reference to a search object by calling async_search
+    async_search('transaction', function(error, search)
     {
-        console.log('The first item returned from the search is: ', result);
-        
-        //gets the rest of the nlobjResults (doesn't get the one previously gotten in search.getNext())
-        search.getRest(function(error, results_array)
+        if(!error)
         {
-            console.log('The rest of the results are: ', results);
-        });
+            //add a filter
+            search.addFilter({name: 'tranid', operator: 'anyof', values: ['Q:24936']});
+            
+            //get all of the results
+            search.getRest(function(error, results)
+            {
+                //print the results out to the console
+                console.log(error, results);
+            });
+        }
     });
 ```
 
 ## Instructions
 
-[Get a copy of the code here ](./async-search-simple.js) .  Upload it to the File Cabinet.  Add it to the Libraries section of your client scripts.  You can then access the ```async_search``` object and call ```async_search.createSearch()```.
-
-If you find that it's taking too long to perform searches using this script, check out the Help section for a technique you can use to make the script a bit faster.
+[Get a copy of the code here ](./async_search.js).  Upload it to the File Cabinet.  Add it to the Libraries section of your client scripts.  After that, you can call ```async_search()``` to get started.
 
 ## API
 
-### async_search (in global namespace)
-| API | Description |  Returns / Callback | Errors? |
-| --- | --- | --- | --- |
-| *function* **createSearch** (search_type) | Creates a search of the designated search type.  This is similar to calling ```nlapiCreateSearch(search_type, [],[])```.  You can add filters and columns later. | Returns **created_search** | None |
+### global
 
-### created_search
-| API | Description |  Returns / Callback | Errors? |
-| --- | --- | --- | --- |
-| *function* **addFilter** (...args...) | Adds a filter to the search.  The parameters you pass to the function are exactly the same as those you'd pass to ```new nlobjSearchFilter(...args...)```.  Please don't pass this function an actual ```nlobjSearchFilter()``` though - just give it the parameters you'd normally put in ```nlobjSearchFilter()```. | Returns **search_filter** | ```You can't add a filter once you've executed the search.```  Error is thrown.  |
-| *function* **addColumn** (...args...) | Similar deal to **addFilter()**.  Adds a column to the search.  The parameters you pass to the function are exactly the same as those you'd pass to ```new nlobjSearchColumn(...args...)```.  Please don't pass this function an actual ```nlobjSearchColumn()``` though - just give it the parameters you'd normally put in ```nlobjSearchColumn()```. | Returns **search_column** | ```You can't add a column once you've executed the search.``` Error is thrown. |
-| *function* **getNext** (callback) | Use this function to get the next available value in the search.  If there are no values left, *undefined* is returned.  Most useful when iterating over large datasets.  Once this has been called, don't use **addFilter()** or **addColumn()** anymore or it will mess things up.  Returns one **nlobjSearchResult** (which is what you get when using a traditional Netsuite search script).   | Callback ( error , **nlobjSearchResult** ) | ```Creating an iframe for Suitescript searches timed out.``` Error is passed via callback. |
-| *function* **getRest** (callback) | Use this function to get all of the remaining values in the search.  This doesn't include values already gotten from **getNext()**.  If there are no values left, *an empty array* is returned. Most useful when you want all the results at once (which is probably most of the time).  For searches with many many results, it could take a while.  Once this has been called, don't use **addFilter()** or **addColumn()** anymore or it will mess things up.  Returns one **nlobjSearchResult** (which is what you get when using a traditional Netsuite search script).   | Callback ( error, **nlobjSearchResult** [] ) | ```Creating an iframe for Suitescript searches timed out.``` Error is passed via callback.  If an error occurs, an incomplete list of results will be passed back in the **nlobjSearchResult** []. |
+The below functions and properties are exposed as a global object (`async_search`).
 
-### search_filter
-| API | Description | 
-| --- |---|
-| *function* **setFormula** (formula) | Works like the corresponding ```nlobjSearchFilter()``` function. |
-| *function* **setSummaryType** (summarytype) | Works like the corresponding ```nlobjSearchFilter()``` function. |
+```javascript
+//Similar to nlapiCreateSearch()
+//Creates a search of the specific type, and gives you it as a search object
+async_search('my_search_type', function(error, search)
+{
+    //sweet, I have a search object
+})
+```
 
-### search_column
-| API | Description | 
-| --- |---|
-| *function* **setSort** (order) | Works like the corresponding ```nlobjSearchColumn()``` function. |
-| *function* **setFormula** (formula) | Works like the corresponding ```nlobjSearchColumn()``` function. |
-| *function* **setFunction** (functionid) | Works like the corresponding ```nlobjSearchColumn()``` function. |
-| *function* **setWhenOrderBy** (name, join) | Works like the corresponding ```nlobjSearchColumn()``` function. |
+```javascript
+//Similar to nlapiLoadSearch()
+//Loads a search using a type and id, and gives you it as a search object
+async_search('my_search_type', 'my_search_id', function(error, search)
+{
+    //sweet, I have a search object
+})
+```
+
+```javascript
+//The amount of SS 2.0 governance you have left
+//You can also use search.remainingUsage
+var governance_left = async_search.remainingUsage
+```
+
+### search
+
+Gotten by calling `async_search()`.  `search` has some things you probably are familiar with:
+
+```javascript
+//Has ALL of the Search.search methods from Suitescript 2.0
+//(because it IS a Search.search object)
+var my_result_set = search.save()
+var search_id = search.run()
+var my_current_filters = search.filters
+//etc...
+```
+
+```javascript
+//Has four of the Search utilty properties from Suitescript 2.0
+//(or you can go old school and use 'transaction' instead of search.Type.TRANSACTION)
+search.Operator.ANYOF
+search.Sort.ASC
+search.Summary.MIN
+search.Type.TRANSACTION
+```
+
+```javascript
+//Has three of the Search general functions from Suitescript 2.0
+var column = search.createColumn({type: 'tranid'})
+var filter = search.createFilter(
+    {name: 'tranid', operator: 'anyof', values: ['Q:24936']})
+var setting = search.createSetting({name: 'consolidationtype', value: 'NONE'})
+
+//You can then assign these directly to the search object
+search.filters = [filter];
+```
+
+`search` also has some very nice utility functions:
+
+```javascript
+//Allows you to create a bunch of filters at once
+search.createFilters([
+	{name: 'tranid', operator: 'anyof', values: ['Q:24936']},
+    {name: 'entity', operator: 'anyof', values: ['12345']}
+])
+```
+
+```javascript
+//Allows you to create a bunch of columns at once
+search.createColumns([
+	{type: 'tranid'},
+	{type: 'entity'}
+])
+```
+
+```javascript
+//Allows you to create a bunch of filters and add them to the search in one go
+search.addFilters([
+	{name: 'tranid', operator: 'anyof', values: ['Q:24936']},
+    {name: 'entity', operator: 'anyof', values: ['12345']}
+])
+```
+
+```javascript
+//Allows you to create a bunch of columns and add them to the search in one go
+search.addColumns([
+	{type: 'tranid'},
+	{type: 'entity'}
+])
+```
+
+```javascript
+//Allows you to create a single filter and add it to the search in one go
+search.addFilter({name: 'tranid', operator: 'anyof', values: ['Q:24936']})
+```
+
+```javascript
+//Allows you to create a single column and add it to the search in one go
+search.addColumn({type: 'tranid'})
+```
+
+Once your done setting up your search, you'll want to get data from it.  Here's how:
+
+```javascript
+//Get the next X results (or less, if there aren't enough available)
+//Useful when you want to proceed through the results in portions
+var amount = 30;
+search.getNext(amount, function(error, results)
+{
+	//if results.length is less than amount
+    //then I've got all my search results
+})
+```
+
+```javascript
+//Gets any remaining available results
+search.getRest(function(error, results)
+{
+	//For huge searches, this will take a long time
+    //(Or run out of governance)
+})
+```
+
+```javascript
+//Iterate through any remaining available results
+search.forEach(function(result)
+{
+	
+}, function(error)
+{
+	//If this is called with an error, the search errored out
+	//If it is called without an error, the search is finished
+})
+```
+
+A good thing to keep in mind, is that this module keeps track of where you are in the search.  This means that you can call  `search.getNext(30)` to get the first 30 results, and then later call `search.getRest()` to get everything *after those 30* (`search.forEach()` would also iterate through everything *after those 30*).
+
+If you want to start over at the first result, call the following:
+
+```javascript
+//resets the search so that the next result you get is the first one.
+search.startOver();
+```
+
+As mentioned earlier, you can check your governance as well:
+
+```javascript
+//The amount of SS 2.0 governance you have left
+//You can also use async_search.remainingUsage
+var governance_left = search.remainingUsage
+```
+
+### Results
+
+The results returned from your search are just the typical search results you get from Suitescript 2.0 searches.  If you are only familiar with Suitescript 1.0 searches, they have a slight difference when you call `result.getValue()`, but that's about it.
+
+### Errors
+
+Errors are also pretty descriptive.  If you try to load a script that doesn't exist, it will throw.  If you run out of governance, it will throw.  Just be aware of those and you should be fine.
 
 ## Help
 
 *Q:  My search is running slowly due to your script.  Can you speed it up?*
 
-A:  Yes, though it requires an additional Suitelet script.  Follow the following steps:
-1. [Get a copy of the Suitelet code here. ](./async-search-advanced-suitelet.js).  Upload it to the File Cabinet.
-2. Create a Suitelet for the script.  For ID, use ``_async_search_adv_slet`` (which will become ``customscript_async_search_adv_slet`` when the Suitelet is saved).  The function is to be called **main**.  Create a single Script Deployment.  For ID ``_async_search_adv_slet`` (which will become ``customdeploy_async_search_adv_slet`` when the Suitelet is saved).  Save the Suitelet.
-3. Go to that Deployment and check All Roles, All Employees, and All Partners.  That will make this script available to everyone.  Then click Save.
-4.  [Replace the original client script with this script.](async-search-advanced.js)
+A:  I can't.  This doesn't add much overhead to your search, it's probably just naturally slow (searches for some records are slower than others).  Reduce the data returned by the search by adding filters or using other techniques to simplify the search.
 
-In the original script, your Netsuite home page was loaded in the *iframe*.  But your homepage is full of a lot of unnecessary html and javascript (leading to long load times).  The Suitelet you just deployed is blank except for the default Netsuite UI, so it's much faster.  This should cut off half a second or so when the script has to grab more data (which happens every 1000 results).  Everything else should be as snappy as ever.
-
-If this doesn't have much of an impact, your search is probably just naturally slow.  Reduce the data returned by the search by adding filters or using other techniques to simplify the search.
-
-*Q:  I added the script to a page you asked and keep getting an error saying I can't access the **async_search** object.  What do I do?*
+*Q:  I added the script to a page you asked and keep getting an error saying **async_search** is not defined.  What do I do?*
 
 A:  Go to Customization -> Scripting -> Scripted Records.  Find the record you are working on and make sure that this script (or the regular script this script is a library for) is listed.  If not, fix that.  If it is listed, make sure that the execution order of the scripts allow **async_search** to be added to the page before you use it.  Otherwise, click Edit and reorder the scripts.
 
@@ -85,7 +222,7 @@ A:  Go to Customization -> Scripting -> Scripted Records.  Find the record you a
 
 A:  Go to the Issues tab here on Github and file an issue.  Please post as much information as possible, including the sample script if you can.  I'll get to you as quickly as I can, though it may take some time.
 
-If you have other issues with Netsuite unrealted to this script, check out the [Unofficial Netsuite Slack Server](http://netsuiteprofessionals.com/), you can get a lot of good help on there (there are *a lot of people* I'd consider Netsuite experts on there).
+If you have other issues with Netsuite unrelated to this script, check out the [Unofficial Netsuite Slack Server](http://netsuiteprofessionals.com/), you can get a lot of good help on there (there are *a lot of people* I'd consider Netsuite experts on there).
 
 *Q:  Do you have a Bundle we could install this through?*
 
@@ -93,11 +230,13 @@ A:  Not at the moment.  Perhaps in the future though.
 
 ## Future Plans
 
-1. Rewrite **getRest()** to not use **getNext()** internally for some possible speedup.  It also might allow several *iframes* to be used at once, but I don't want this script to abuse governance limits.
-2.  Add some utilities to deal with the fact that changes to the database occur when you are performing a search (eliminate duplicate IDs?)
-3. Bulk APIs for **addFilter()** and **addColumn()** would be great.
-4. An API to work with *loaded searches* would be nice too (but would require a lot more knowledge on my part).
+1. A helper function for saving that perhaps turns search.save.promise into a callback format.  I like callbacks.
+2.  This module makes it harder to tell when your going to run out of governance, as you don't know when results are going to be gotten (especially if you are using `search.getNext()`).  Perhaps some functions could be used to signify that the next call get you out of governance.  There also might be a way to make a function that "*just gets the data until you are out of governance*", so you don't have to do any checking.
+3. Promises if callbacks aren't provided.
+4. Better documentation.
 
 ## Changelog
+
+**10/15/2019** - Script completely overhauled.  It turns out that `<iframes>` still run in the same process, so it's not really making things asynchronous (though it did freeze up the UI a bit less).  Now we are straight to using a function provided by Netsuite, so it really does what it's supposed to.  Large API change though, and a bit less convenient.
 
 **7/3/2019** - Scripts uploaded.  I guess you could say this is version 1.0.0
