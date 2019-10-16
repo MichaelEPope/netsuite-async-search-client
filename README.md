@@ -251,7 +251,7 @@ A:  Go to Customization -> Scripting -> Scripted Records.  Find the record you a
 
 A:  Go to the Issues tab here on Github and file an issue.  Please post as much information as possible, including the sample script if you can.  I'll get to you as quickly as I can, though it may take some time.
 
-If you have other issues with Netsuite unrelated to this script, check out the [Unofficial Netsuite Slack Server](http://netsuiteprofessionals.com/), you can get a lot of good help on there (there are *a lot of people* I'd consider Netsuite experts on there).
+If you have other issues with Netsuite unrelated to this script, check out the [Unofficial Netsuite Slack Server](https://netsuiteprofessionals.com/slack/), you can get a lot of good help on there (there are *a lot of people* I'd consider Netsuite experts on there).
 
 *Q:  Do you have a Bundle we could install this through?*
 
