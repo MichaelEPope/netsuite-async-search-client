@@ -173,7 +173,7 @@ function async_search(arg1, arg2, arg3)
 
                     //if there aren't any more results we can get (<1000 means we are at the end)
                     //then set our no_more_results flag and we are finished
-                    if(results_array.length < 1000)
+                    if(result_array.length < 1000)
                     {
                         no_more_results = true;
                         return callback();
