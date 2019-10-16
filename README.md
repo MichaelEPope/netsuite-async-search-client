@@ -237,7 +237,7 @@ A:  Not at the moment.  Perhaps in the future though.
 
 ## Changelog
 
-**10/16/2019** - Made remainingUsage a funciton rather than a property.
+**10/16/2019** - Made remainingUsage a function rather than a property.
 
 **10/15/2019** - Script completely overhauled.  It turns out that `<iframes>` still run in the same process, so it's not really making things asynchronous (though it did freeze up the UI a bit less).  Now we are straight to using a function provided by Netsuite, so it really does what it's supposed to.  Large API change though, and a bit less convenient.
 
