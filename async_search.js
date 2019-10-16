@@ -2,89 +2,76 @@
     Async Search (for Suitescript 1.0 Client Side Scripts)
     Version 2.0.0
 
-    A module which allows us to easily perform an async search in SS 1.0.  Start by doing one of the following:
-
-        async_search('transaction', function(error, search)                                        //create a new search
-        {
-            //you have access to the search object now
-        });
-
-        async_search('transaction', 'custsearch_i_created_before', function(error, search)         //load an existing search
-        {
-            //you have access to the search object now
-        });
-
-    From there, you have access to some of the SS 2.0 methods and properties directly from the search object.
-    For example, search.Operator,  search.Sort,  search.Summary,  search.Type,  search.createColumn(),  search.createFilter(), and  search.createSetting().
-    We've also provided a few utility functions, search.createFilters() and search.createColumns().
-
-        search.filters = search.createFilters([                                                                 //just search.createFilter, but for multiple filters
-            {name:'tranid', join:null, operator:'is', values:['SO:12345']},
-            {name: 'entity', join: null, operator: 'is', values: [11123]}
-        ])
-
-        search.columns = search.createColumns([                                                                 //just search.createColumn, but for multiple columns
-            {name:'tranid'}
-        ])
-
-    As you can see, just like in SS 2.0, you can set the filters, columns, and settings properties directly.
-    Finally, to make getting reults nice, we've added some utility methods.  They get SS 2.0 result objects:
-    
-        search.getNext(300, function(err, results)              //get a certain number of results
-        {
-            console.log(results);
-        });
-
-        search.getRest(function(err, results)                   //gets all of the remaining results
-        {
-            console.log(results);
-        });
-
-        search.forEach(function(result)                         //iterates through all of the remaining results
-        {
-            console.log(result);
-        }, function(err)
-        {
-            console.log('finished (or errored)');
-        });
-    
-    These methods can be used with each other, but also consume the results together.
-    For example, you could call search.getNext(300) to get the first 300, and then search.getRest() to get the rest of the results (hopefully you don't have over 40,000)
-    Each of these methods starts up where the last one left off.  If you want to start over at the beginning at result 0, call:
-
-        search.startOver();
+    A module which allows us to easily perform an async search in SS 1.0.  See readme.md for details.
 */
 function async_search(arg1, arg2, arg3)
 {
-    //HELPER FUNCTION
+    /*
+        HELPER FUNCTIONS
+
+        Some functions we use to do some basic type checking.
+    */
+    
     function isString(myVar)
     {
         return typeof myVar === 'string' || myVar instanceof String;
     }
 
-    //ARGUMENTS
-    //sometimes, a search_id is given, other times it is not, therefore the arguments are sometimes in different places
-    var type = arg1;
-    var search_id = isString(arg2)? arg2 : undefined;
-    var callback = search_id? arg3 : arg2
+    function isArray(myVar)
+    {
+        return Array.isArray(myVar);
+    }
 
-    //GETTING THE SS 2.0 ENVIRONMENT
-    //this is required for anything SS 2.0 related
+    /*
+        INITIAL ARGUMENTS
+
+        async_search has two function signatures:
+
+        1)  async_search(type, callback)
+        2)  async_search(type, search_id, callback)
+
+        This helps us set up some local variables with information based on those two signatures.
+    */
+
+    var type = arg1;                                    //type is always the first argument
+    var search_id = isString(arg2)? arg2 : undefined;   //if the second argument is a string, it's the search_id
+    var callback = search_id? arg3 : arg2               //if we have a search_id, the 3rd arguments is a callback, otherwise it's the 2nd argument
+
+    /*
+        SETUP SS 2.0
+
+        Sets up the SS 2.0, so we can start doing some intersting stuff.
+        We need the search (for search capabilities) and runtime (for governance information) modules.
+    */
+
     require(["N/search", "N/runtime"], function(search, runtime)
     {
 
-        //create some variables we will use later
-        var loaded_search;
-        var range;
-        var rangeCount = 0;
-        var done = false;
-        var results_set;
+        /*
+            LOCAL PRIVATE VARIABLES
 
-        //a list of our utility methods (and some helper methods) below
+            Some private variables we use internally that helps this script do more than simply expose the SS 2.0 search module.
+        */
+
+        var our_search;                 //a reference to the search we have created or loaded
+        var result_set;                 //a reference to the 'result set' for our search, which we can use to get search results
+        var range;                      //a list of searchResults we have gotten recently (we splice() and concat() this alot, so it's length definately changes)
+        var range_count = 0;            //we get ranges in groups of 1000, this is a counter to ensure we get 1000, then 2000, then 3000, etc.
+        var no_more_results = false;    //a flag we set when we are out of results (this helps us return faster)
+
+        /*
+            PUBLIC FUNCTIONS - Filters & Columns
+
+            These are some utilities we have for dealing with filters and columns.
+            They are included on the object we return to the user.
+        */
+
+        //Creates a list of filters from a list of filter descriptions.  Very similar to search.createFilter(), except it work for multiple descriptions.
         function createFilters(filters)
         {
-            if(Array.isArray(filters))
+            if(isArray(filters))
             {
+                //map our filter descriptions to actual filters, and then return them
                 return filters.map(function(filter)
                 {
                     return search.createFilter(filter);
@@ -92,14 +79,17 @@ function async_search(arg1, arg2, arg3)
             }
             else
             {
+                //if it's not an array, it's a single filter description, so turn it into a filter and stick it in an array
                 return [search.createFilter(filters)];
             }
         }
 
+        //Creates a list of columns from a list of column descriptions.  Very similar to search.createColumn(), except it work for multiple descriptions.
         function createColumns(columns)
         {
-            if(Array.isArray(columns))
+            if(isArray(columns))
             {
+                //map our column descriptions to actual columns, and then return them
                 return columns.map(function(column)
                 {
                     return search.createColumn(column);
@@ -107,118 +97,150 @@ function async_search(arg1, arg2, arg3)
             }
             else
             {
+                //if it's not an array, it's a single column description, so turn it into a column and stick it in an array
                 return [search.createColumn(columns)];
             }
         }
 
-        function addFilter(filter)
-        {
-            var additional_filter = search.createFilter(filter);
-            loaded_search.filters = loaded_search.filters.concat([additional_filter])
-        }
-
-        function addColumn(column)
-        {
-            var additional_column = search.createColumn(column);
-            loaded_search.columns = loaded_search.columns.concat([additional_column])
-        }
-
+        //Adds a bunch of filter descriptions as filters to the current search.  Syntactical sugar for concat()ing the results of createFilters()
         function addFilters(filters)
         {
             var additional_filters = createFilters(filters);
-            loaded_search.filters = loaded_search.filters.concat(additional_filters)
+            our_search.filters = our_search.filters.concat(additional_filters)
         }
 
+        //Adds a bunch of column descriptions as columns to the current search.  Syntactical sugar for concat()ing the results of createColumns()
         function addColumns(columns)
         {
             var additional_columns = createFilters(columns);
-            loaded_search.columns = loaded_search.columns.concat(additional_columns)
+            our_search.columns = our_search.columns.concat(additional_columns)
         }
 
+        //Adds a filter description as a filters to the current search.  Syntactical sugar for concat()ing the results of createFilter()
+        function addFilter(filter)
+        {
+            var additional_filter = search.createFilter(filter);
+            our_search.filters = our_search.filters.concat([additional_filter])
+        }
+
+        //Adds a column descriptions as a column to the current search.  Syntactical sugar for concat()ing the results of createColumn()
+        function addColumn(column)
+        {
+            var additional_column = search.createColumn(column);
+            our_search.columns = our_search.columns.concat([additional_column])
+        }
+
+        /*
+            LOCAL PRIVATE FUNCTIONS - Getting Results
+
+            Some private functions we use internally that helps this script do more than simply expose the SS 2.0 search module.
+        */
+
+        //A function which attempts to get a certain amount of searchResults by loading them from the result_set and appending them to range
+        //If there aren't enough searchResults left, it just loads what is there and appends it
         function getResults(amount, callback)
         {
-            console.log('started results');
+            //if this is our first time getting results, we need to initialize our range and get our result_set
             if(!range)
             {
                 range = [];
-                result_set = loaded_search.run();
+                result_set = our_search.run();
             }
-            if(range.length < amount)
+
+            //if we have enough, or there aren't any more results to get we can finish now
+            if(range.length >= amount || no_more_results)
             {
-                console.log('working');
+                return callback();
+            }
+            //otherwise...
+            else
+            {
+                //save a copy of the current length
                 var previous_length = range.length;
-                console.log('length', previous_length);
+
+                //and get the next range of searchResults
                 result_set.getRange.promise({
-                    start: rangeCount*1000,
-                    end: (rangeCount + 1)*1000
+                    start: range_count*1000,
+                    end: (range_count + 1)*1000
                 })
                 .then(function(result_array)
                 {
-                    console.log('got range');
+                    //update our counter and governance variables
+                    range_count++;
+
+                    //add those searchResults to our range
                     range = range.concat(result_array);
-                    rangeCount++;
-                    updateRemainingUsage();
-                    if(range.length > amount)
+
+                    //if there aren't any more results we can get (<1000 means we are at the end)
+                    //then set our no_more_results flag and we are finished
+                    if(results_array.length < 1000)
+                    {
+                        no_more_results = true;
+                        return callback();
+                    }
+                    //otherwise if we have enough results to fill amount already, we can finish
+                    else if(range.length >= amount)
                     {
                         return callback();
                     }
-                    else if(range.length == previous_length)
-                    {
-                        done = true;
-                        return callback();
-                    }
+                    //otherwise get some more results
                     else
                     {
                         return getResults(amount, callback);
                     }
+
                 })
                 .catch(function(error)
                 {
-                    console.log('errd');
+                    //on errors, return back an error
                     return callback(error);
                 });
             }
-            else
-            {
-                return callback();
-            }
         }
 
+        /*
+            PUBLIC FUNCTIONS - Getting Results
+
+            Some functions we expose to the user to make it easier to get results in the way that you want.
+        */
+
+        //Gets the next X searchResults
         function getNext(amount, callback)
         {
-            console.log('started');
-            if(done)
+            //get those results and store them in range
+            getResults(amount, function(error)
             {
-                return callback(null, []);
-            }
-            else
-            {
-                getResults(amount, function(error)
+                //if we have issues, throw an error
+                if(error)
                 {
-                    console.log('got results');
-                    if(error)
-                    {
-                        return callback(error);
-                    }
-                    else
-                    {
-                        var to_return = range.splice(0,amount);
-                        return callback(null, to_return);
-                    }
-                });
-            }
+                    return callback(error);
+                }
+                //otherwise splice the results we need out of range and finish
+                else
+                {
+                    var to_return = range.splice(0,amount);
+                    return callback(null, to_return);
+                }
+            });
         }
+
+        //Gets all the rest of the searchResults
         function getRest(callback)
         {
-            console.log('got rest');
             getNext(Number.MAX_SAFE_INTEGER, callback);
         }
+
+        //Iterates through the remaining search results
         function forEach(itemFunction, callback)
         {
+            //gets 1000 searchResults (since that's an efficient number to use with getNext())
             getNext(1000, function(err, results)
             {
+                //on error, throw an error
                 if(err)                      { return callback(err); }
+                //on lack of remaining results, we are finished
                 else if(results.length == 0) { return callback();    }
+                //otherwise iterate through the results and recursive call yourself
                 else
                 {
                     for(var index = 0; index < results.length; index++)
@@ -229,79 +251,84 @@ function async_search(arg1, arg2, arg3)
                 }
             })
         }
+
+        //A nice function to start the searchResults over from the beginning
         function startOver()
         {
             range = undefined;
-            rangeCount = 0;
-            done = false;
+            range_count = 0;
+            no_more_results = false;
             result_set = undefined;
         }
 
-        function updateRemainingUsage()
-        {
-            var remainingUsage = runtime.getCurrentScript().getRemainingUsage();
-            if(loaded_search)
-            {
-                loaded_search.remainingUsage = remainingUsage;
-            }
-            async_search.remainingUsage = remainingUsage;
-        }
+        /*
+            LOCAL PRIVATE FUNCTIONS - Adding Properties to the Search Object
 
+            We need to take all of these useful utilities above and add them to the search object.
+        */
+
+        //This function takes all the stuff we want on the search object and puts it on the search object
         function set_utility_functions_and_variables()
         {
-            //Properties we don't intend for the end-user to modify (Read-Only)
-            loaded_search.Operator = search.Operator,
-            loaded_search.Sort = search.Sort,
-            loaded_search.Summary = search.Summary,
-            loaded_search.Type = search.Type,
+            //Properties from the Search module that might be useful
+            our_search.Operator = search.Operator,
+            our_search.Sort = search.Sort,
+            our_search.Summary = search.Summary,
+            our_search.Type = search.Type,
 
-            //Methods from the SS2.0 Search Object
-            loaded_search.createColumn = search.createColumn,
-            loaded_search.createFilter = search.createFilter,
-            loaded_search.createSetting = search.createSetting,
+            //Methos from the Search module that might be useful
+            our_search.createColumn = search.createColumn,
+            our_search.createFilter = search.createFilter,
+            our_search.createSetting = search.createSetting,
 
-            //Utility methods we have added
-            loaded_search.createFilters = createFilters;
-            loaded_search.createColumns = createColumns;
-            loaded_search.addFilters = addFilters;
-            loaded_search.addColumns = addColumns;
-            loaded_search.addFilter = addFilter;
-            loaded_search.addColumn = addColumn;
-            loaded_search.getNext = getNext;
-            loaded_search.getRest = getRest;
-            loaded_search.startOver = startOver;
-            loaded_search.forEach = forEach;
-            updateRemainingUsage();
+            //Utility methods we have crated
+            our_search.createFilters = createFilters;
+            our_search.createColumns = createColumns;
+            our_search.addFilters = addFilters;
+            our_search.addColumns = addColumns;
+            our_search.addFilter = addFilter;
+            our_search.addColumn = addColumn;
+            our_search.getNext = getNext;
+            our_search.getRest = getRest;
+            our_search.startOver = startOver;
+            our_search.forEach = forEach;
+
+            //Also, add getRemainingUsage() in the two places we want it
+            our_search.getRemainingUsage = runtime.getCurrentScript().getRemainingUsage();
+            async_search.remainingUsage = runtime.getCurrentScript().getRemainingUsage();
         }
 
+        /*
+            SEARCH CREATION
+
+            Finally, after creating a bunch of functions, we can actually create the search
+        */
+       
+        var get_search = search.create.promise;     //by default, we want to create a search
+        var search_options = {type: type};          //where all we care about is the type
         if(search_id)
         {
-            search.load.promise({type: type, id: search_id})
-            .then(function(search_obj)
-            {
-                loaded_search = search_obj;
-                set_utility_functions_and_variables()
-                return callback(null, loaded_search)
-            })
-            .catch(function(error)
-            {
-                return callback(error);
-            });
+            get_search = search.load.promise;       //however, if there is a search id, we want to load the search instead
+            search_options.id = search_id;          //so we add a search_id to the options
         }
-        else
+
+        get_search(search_options)                  //get the search
+        .then(function(search_obj)
         {
-            search.create.promise({type: type})
-            .then(function(search_obj)
-            {
-                loaded_search = search_obj;
-                set_utility_functions_and_variables()
-                return callback(null, loaded_search)
-            })
-            .catch(function(error)
-            {
-                return callback(error);
-            });
-        }
+            our_search = search_obj;                //and save it to our local variable
+            set_utility_functions_and_variables()   //set the appropriate properties on the search
+            return callback(null, our_search)       //and give it to the user
+        })
+        .catch(function(error)                      //if there's an error, toss an error
+        {
+            return callback(error);
+        })
     });
 }
-async_search.remainingUsage = 1000;
+
+//by default, if we haven't ever loaded the search module, remainingUsage will always be 1000
+//(we will later overwrite this with the correct function, asyou can see in set_utility_functions_and_variables())
+async_search.remainingUsage = function()
+{
+    return 1000;
+}
