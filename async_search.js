@@ -262,6 +262,22 @@ function async_search(arg1, arg2, arg3)
         }
 
         /*
+            PUBLIC FUNCTIONS - Other
+
+            Just some other utilities that are available for useres but don't fit in any other category
+        */
+
+        function saveWithCallback(callback)
+        {
+            our_search.save.promise()
+            .then(function(search_id)
+            {
+                callback(null, search_id);
+            })
+            .catch(callback);
+        }
+
+        /*
             LOCAL PRIVATE FUNCTIONS - Adding Properties to the Search Object
 
             We need to take all of these useful utilities above and add them to the search object.
@@ -292,10 +308,13 @@ function async_search(arg1, arg2, arg3)
             our_search.getRest = getRest;
             our_search.startOver = startOver;
             our_search.forEach = forEach;
+            our_search.save.callback = saveWithCallback;
 
-            //Also, add getRemainingUsage() in the two places we want it
-            our_search.getRemainingUsage = runtime.getCurrentScript().getRemainingUsage();
-            async_search.remainingUsage = runtime.getCurrentScript().getRemainingUsage();
+            //Also, add getRemainingUsage() in the few places we want it
+            var remainingUsage = runtime.getCurrentScript().getRemainingUsage();
+            our_search.getRemainingUsage = remainingUsage;
+            async_search.remainingUsage = remainingUsage;
+            async_lookup_field.remainingUsage = remainingUsage;
         }
 
         /*
@@ -326,9 +345,30 @@ function async_search(arg1, arg2, arg3)
     });
 }
 
+//The async version of nlapiLookupField()
+function async_lookup_field(options, callback)
+{
+    require(["N/search", "N/runtime"], function(search, runtime)
+    {
+        //Add getRemainingUsage() in the few places we want it
+        var remainingUsage = runtime.getCurrentScript().getRemainingUsage();
+        async_search.remainingUsage = remainingUsage;
+        async_lookup_field.remainingUsage = remainingUsage;
+
+        //perform the lookup operation and then return that data to the callback
+        search.lookupFields.promise(options)
+        .then(function(result)
+        {
+            callback(null, result);
+        })
+        .catch(callback);
+    });
+}
+
 //by default, if we haven't ever loaded the search module, remainingUsage will always be 1000
 //(we will later overwrite this with the correct function, asyou can see in set_utility_functions_and_variables())
 async_search.remainingUsage = function()
 {
     return 1000;
 }
+async_lookup_field.remainingUsage = async_search.remainingUsage;
