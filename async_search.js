@@ -346,7 +346,7 @@ function async_search(arg1, arg2, arg3)
 }
 
 //The async version of nlapiLookupField()
-function async_lookup_field(options, callback)
+function async_lookup_field(type, id, columns, callback)
 {
     require(["N/search", "N/runtime"], function(search, runtime)
     {
@@ -356,7 +356,11 @@ function async_lookup_field(options, callback)
         async_lookup_field.remainingUsage = remainingUsage;
 
         //perform the lookup operation and then return that data to the callback
-        search.lookupFields.promise(options)
+        search.lookupFields.promise({
+            type: type,
+            id: id,
+            columns: columns
+        })
         .then(function(result)
         {
             callback(null, result);
