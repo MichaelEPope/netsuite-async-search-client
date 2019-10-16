@@ -233,6 +233,7 @@ A:  Not at the moment.  Perhaps in the future though.
 1. A helper function for saving that perhaps turns search.save.promise into a callback format.  I like callbacks.
 2.  This module makes it harder to tell when your going to run out of governance, as you don't know when results are going to be gotten (especially if you are using `search.getNext()`).  Perhaps some functions could be used to signify that the next call get you out of governance.  There also might be a way to make a function that "*just gets the data until you are out of governance*", so you don't have to do any checking.
 3. Promises if callbacks aren't provided.
+4. I need an API for lookupField() as well.
 
 ## Changelog
 
