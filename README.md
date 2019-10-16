@@ -5,7 +5,7 @@ A Netsuite client-side script that allows you to perform searches and field look
 
 ## Why use this script?
 
-In Netsuite, running searches in client side scripts using `nlapiCreateSearch()` or `nlapiLookupField()` can be a problem.  Becuase the searhes are blocking, the UI freezes up and your coworkers will complain.
+In Netsuite, running searches in client side scripts using `nlapiCreateSearch()` or `nlapiLookupField()` can be a problem.  Becuase the searches are blocking, the UI freezes up and your coworkers will complain.
 
 Recently, Netsuite realeased Suitescript 2.0, which contained the capability to run asynchrnous searches.  This script brings the functionality you see in Suitescript 2.0 into Suitescript 1.0, so you can have awesome asynchronous searches and pretty looking code.
 
