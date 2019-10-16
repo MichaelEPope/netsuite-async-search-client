@@ -77,8 +77,8 @@ In addition, there is a second global object exposed as (`async_lookup_field`).
 ```javascript
 //Similar to nlapiLookupField()
 //if you only want one field, use a string instead of an array for columns
-async_lookup_field(
-    {type: 'my_search_type', id: 'record_id', columns: ['some', 'fields', 'I', 'want']}, function(error, results)
+async_lookup_field('my_search_type', 'record_id' ['some', 'fields', 'I', 'want'],
+function(error, results)
 {
     //sweet, I either have a results object or an array of result objects
 })
