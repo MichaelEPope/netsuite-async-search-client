@@ -72,6 +72,23 @@ async_search('my_search_type', 'my_search_id', function(error, search)
 var governance_left = async_search.getRemainingUsage()
 ```
 
+In addition, there is a second global object exposed as (`async_lookup_field`).
+
+```javascript
+//Similar to nlapiLookupField()
+//if you only want one field, use a string instead of an array for columns
+async_lookup_field(
+    {type: 'my_search_type', id: 'record_id', columns: ['some', 'fields', 'I', 'want']}, function(error, results)
+{
+    //sweet, I either have a results object or an array of result objects
+})
+```
+
+```javascript
+//The amount of SS 2.0 governance you have left
+var governance_left = async_lookup_field.getRemainingUsage()
+```
+
 ### search
 
 Gotten by calling `async_search()`.  `search` has some things you probably are familiar with:
@@ -200,6 +217,18 @@ As mentioned earlier, you can check your governance as well:
 var governance_left = search.getRemainingUsage()
 ```
 
+For saving data, search already has `search.save()` and `search.save.promise()`.  I've added one more for those of us who like callbacks.
+
+```javascript
+//Just like search.save.promise() but using a callback
+search.callback.save(function(error, search_id)
+{
+
+})
+```
+
+
+
 ### Results
 
 The results returned from your search are just the typical search results you get from Suitescript 2.0 searches.  If you are only familiar with Suitescript 1.0 searches, they have a slight difference when you call `result.getValue()`, but that's about it.
@@ -230,10 +259,8 @@ A:  Not at the moment.  Perhaps in the future though.
 
 ## Future Plans
 
-1. A helper function for saving that perhaps turns search.save.promise into a callback format.  I like callbacks.
 2.  This module makes it harder to tell when your going to run out of governance, as you don't know when results are going to be gotten (especially if you are using `search.getNext()`).  Perhaps some functions could be used to signify that the next call get you out of governance.  There also might be a way to make a function that "*just gets the data until you are out of governance*", so you don't have to do any checking.
 3. Promises if callbacks aren't provided.
-4. I need an API for lookupField() as well.
 
 ## Changelog
 
