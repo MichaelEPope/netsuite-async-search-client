@@ -80,7 +80,7 @@ In addition, there is a second global object exposed as (`async_lookup_field`).
 async_lookup_field('my_search_type', 'record_id' ['some', 'fields', 'I', 'want'],
 function(error, results)
 {
-    //sweet, I either have a results object or an array of result objects
+    //sweet, I either have a result object or an array of result objects
 })
 ```
 
