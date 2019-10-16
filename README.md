@@ -1,11 +1,11 @@
 
 # Netsuite Async Search (Client Side Script - SuiteScript 1.0)
 
-A Netsuite client-side script that allows you to perform searches without blocking up the UI.
+A Netsuite client-side script that allows you to perform searches and field lookups without blocking up the UI.
 
 ## Why use this script?
 
-In Netsuite, running searches in client side scripts using `nlapiCreateSearch()` can be a problem.  Becuase the searhes are blocking, the UI freezes up and your coworkers will complain.
+In Netsuite, running searches in client side scripts using `nlapiCreateSearch()` or `nlapiLookupField()` can be a problem.  Becuase the searhes are blocking, the UI freezes up and your coworkers will complain.
 
 Recently, Netsuite realeased Suitescript 2.0, which contained the capability to run asynchrnous searches.  This script brings the functionality you see in Suitescript 2.0 into Suitescript 1.0, so you can have awesome asynchronous searches and pretty looking code.
 
@@ -40,7 +40,7 @@ This is just a small sample of what can be done.  Take a look at the full API be
 
 ## Instructions
 
-[Get a copy of the code here ](./async_search.js).  Upload it to the File Cabinet.  Add it to the Libraries section of your client scripts.  After that, you can call ```async_search()``` to get started.
+[Get a copy of the code here ](./async_search.js).  Upload it to the File Cabinet.  Add it to the Libraries section of your client scripts.  After that, you can call ```async_search()``` or ```async_lookup_field()``` to get started.
 
 ## API
 
