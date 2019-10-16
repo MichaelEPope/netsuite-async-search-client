@@ -68,8 +68,8 @@ async_search('my_search_type', 'my_search_id', function(error, search)
 
 ```javascript
 //The amount of SS 2.0 governance you have left
-//You can also use search.remainingUsage
-var governance_left = async_search.remainingUsage
+//You can also use search.getRemainingUsage()
+var governance_left = async_search.getRemainingUsage()
 ```
 
 ### search
@@ -196,8 +196,8 @@ As mentioned earlier, you can check your governance as well:
 
 ```javascript
 //The amount of SS 2.0 governance you have left
-//You can also use async_search.remainingUsage
-var governance_left = search.remainingUsage
+//You can also use async_search.getRemainingUsage()
+var governance_left = search.getRemainingUsage()
 ```
 
 ### Results
@@ -236,6 +236,8 @@ A:  Not at the moment.  Perhaps in the future though.
 4. Better documentation.
 
 ## Changelog
+
+**10/16/2019** - Made remainingUsage a funciton rather than a property.
 
 **10/15/2019** - Script completely overhauled.  It turns out that `<iframes>` still run in the same process, so it's not really making things asynchronous (though it did freeze up the UI a bit less).  Now we are straight to using a function provided by Netsuite, so it really does what it's supposed to.  Large API change though, and a bit less convenient.
 
