@@ -111,7 +111,7 @@ search.filters = [filter];
 //Allows you to create a bunch of filters at once
 search.createFilters([
 	{name: 'tranid', operator: 'anyof', values: ['Q:24936']},
-    {name: 'entity', operator: 'anyof', values: ['12345']}
+    	{name: 'entity', operator: 'anyof', values: ['12345']}
 ])
 ```
 
@@ -127,7 +127,7 @@ search.createColumns([
 //Allows you to create a bunch of filters and add them to the search in one go
 search.addFilters([
 	{name: 'tranid', operator: 'anyof', values: ['Q:24936']},
-    {name: 'entity', operator: 'anyof', values: ['12345']}
+    	{name: 'entity', operator: 'anyof', values: ['12345']}
 ])
 ```
 
@@ -158,7 +158,7 @@ var amount = 30;
 search.getNext(amount, function(error, results)
 {
 	//if results.length is less than amount
-    //then I've got all my search results
+    	//then I've got all my search results
 })
 ```
 
@@ -167,7 +167,7 @@ search.getNext(amount, function(error, results)
 search.getRest(function(error, results)
 {
 	//For huge searches, this will take a long time
-    //(Or run out of governance)
+    	//(Or run out of governance)
 })
 ```
 
