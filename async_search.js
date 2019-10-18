@@ -12,15 +12,9 @@ function async_search(arg1, arg2, arg3)
         Some functions we use to do some basic type checking.
     */
     
-    function isString(myVar)
-    {
-        return typeof myVar === 'string' || myVar instanceof String;
-    }
-
-    function isArray(myVar)
-    {
-        return Array.isArray(myVar);
-    }
+    function isString(myVar)    {   return typeof myVar === 'string' || myVar instanceof String;    }
+    function isArray(myVar)     {   return Array.isArray(myVar);                                    }
+    function isNumber(myVar)    {   return !isNaN(myVar);                                           }
 
     /*
         INITIAL ARGUMENTS
@@ -54,10 +48,7 @@ function async_search(arg1, arg2, arg3)
         */
 
         var our_search;                 //a reference to the search we have created or loaded
-        var result_set;                 //a reference to the 'result set' for our search, which we can use to get search results
-        var range;                      //a list of searchResults we have gotten recently (we splice() and concat() this alot, so it's length definately changes)
-        var range_count = 0;            //we get ranges in groups of 1000, this is a counter to ensure we get 1000, then 2000, then 3000, etc.
-        var no_more_results = false;    //a flag we set when we are out of results (this helps us return faster)
+        var search_progress;            //a reference to our progress itreating through a search
 
         /*
             PUBLIC FUNCTIONS - Filters & Columns
@@ -106,95 +97,165 @@ function async_search(arg1, arg2, arg3)
         function addFilters(filters)
         {
             var additional_filters = createFilters(filters);
-            our_search.filters = our_search.filters.concat(additional_filters)
+            if(our_search.filters)
+            {
+                our_search.filters = our_search.filters.concat(additional_filters)
+            }
+            else
+            {
+                our_search.filters = additional_filters;
+            }
         }
 
         //Adds a bunch of column descriptions as columns to the current search.  Syntactical sugar for concat()ing the results of createColumns()
         function addColumns(columns)
         {
-            var additional_columns = createFilters(columns);
-            our_search.columns = our_search.columns.concat(additional_columns)
+            var additional_columns = createColumns(columns);
+            if(our_search.columns)
+            {
+                our_search.columns = our_search.columns.concat(additional_columns)
+            }
+            else
+            {
+                our_search.columns = additional_columns;
+            }
         }
 
         //Adds a filter description as a filters to the current search.  Syntactical sugar for concat()ing the results of createFilter()
         function addFilter(filter)
         {
-            var additional_filter = search.createFilter(filter);
-            our_search.filters = our_search.filters.concat([additional_filter])
+            addFilters([filter]);
         }
 
         //Adds a column descriptions as a column to the current search.  Syntactical sugar for concat()ing the results of createColumn()
         function addColumn(column)
         {
-            var additional_column = search.createColumn(column);
-            our_search.columns = our_search.columns.concat([additional_column])
+            addColumns([column]);
         }
 
         /*
             LOCAL PRIVATE FUNCTIONS - Getting Results
 
-            Some private functions we use internally that helps this script do more than simply expose the SS 2.0 search module.
+            This is an internal object we use to store all of the variables we need to get data.
+            If your interested in how we get the searchResults, this is what you'l be interested in 
         */
 
-        //A function which attempts to get a certain amount of searchResults by loading them from the result_set and appending them to range
-        //If there aren't enough searchResults left, it just loads what is there and appends it
-        function getResults(amount, callback)
+        //Creates an object which we use to iterate thorugh the search results
+        function startSearch()
         {
-            //if this is our first time getting results, we need to initialize our range and get our result_set
-            if(!range)
+            /*
+                LOCAL FUNCTION PRIVATE VARS
+            */
+            var result_set = our_search.run();  //a reference to the 'result set' for our search, which we can use to get search results
+            var range = [];                     //a list of searchResults we have gotten recently (we splice() and concat() this alot, so it's length definately changes)
+            var range_count = 0;                //we get ranges in groups of 1000, this is a counter to ensure we get 1000, then 2000, then 3000, etc.
+            var task_queue = [];                //a list of callbacks we need to perform
+            var processing_queue = false;       //we need to know if we are already processing the queue so that if we are, we don't start processing it a 2nd time concurrently
+            var no_more_results = false;        //a flag we set when we are out of results (this helps us return faster)
+            var cancelled = false;              //a flag we set when we should cancel all future callbacks (an option we have if we startOver() the search)
+
+
+            //calls a task callback given a task and it's results
+            function callTaskCallback(task, error, to_return)
             {
-                range = [];
-                result_set = our_search.run();
+                task.callback(error, to_return);
             }
 
-            //if we have enough, or there aren't any more results to get we can finish now
-            if(range.length >= amount || no_more_results)
+            //A function to process the tasks in our queue and give those tasks searchResults
+            function processQueue()
             {
-                return callback();
+                processing_queue = true;    //we are currently processing the queue
+
+                if(cancelled)               //on cancelled
+                {
+                    task_queue = [];            //empty the task queue
+                    processing_queue = false;   //and we are done procesisng the queue
+                    return;                     //we are finished
+                }
+
+                else if(no_more_results)                                //if there are no more searchResults to get using getRange()
+                {
+                    for(var index = 0; index < task_queue.length; index++)          //iterate through the tasks
+                    {
+                        var task = task_queue[index];
+                        var to_return = range.splice(0,task.amount);                //get the approrpriate amount of searchResults (or less if there aren't enough)
+                        setTimeout(callTaskCallback, 1, task, null, to_return);     //after a brief delay, give those searchResults to the callback
+                    }
+                    task_queue = [];                                        //empty the task queue
+                    processing_queue = false;                               //and we are done processing the queue
+                    return;                                                 //we are finished
+                }
+                
+                else                                                                //if there are still searchResults we can get using getRange()
+                {
+                    while(task_queue.length > 0 && task_queue[0].amount <= range.length)    //while we still have searchResults to distribute to the tasks
+                    {
+                        var task = task_queue.shift();                                      //remove the first task from the queue
+                        var to_return = range.splice(0,task.amount);                        //get the approrpriate amount of searchResults (or less if there aren't enough)
+                        setTimeout(callTaskCallback, 1, task, null, to_return);             //after a brief delay, give those searchResults to the callback
+                    }
+
+                    if(task_queue.length == 0 && range.length >= 1000)  //if we don't have any more tasks left, and we have at least 1000 (the amount we want to have preloaded)
+                    {
+                        processing_queue = false;                           //then we are done processing the queue
+                        return;                                             //we are finished
+                    }
+                    else                                                    //otherwise, we need to get some more searchResults
+                    {
+                        result_set.getRange.promise({
+                            start: range_count*1000,
+                            end: (range_count + 1)*1000
+                        })
+                        .then(function(result_array)
+                        {
+                            range_count++;                          //update our range counter
+                            range = range.concat(result_array);     //add our results to our list of searchResults
+
+                            if(result_array.length < 1000)          //if we have less than 1000 results, there aren't going to be any more searchResults to get
+                            {
+                                no_more_results = true;                 //so we can set the flag that says that
+                            }
+                            processQueue();                         //then recursively call to fulfill more tasks
+                        })
+                        .catch(function(error)                                  //if we have an error getting searchResults
+                        {
+                            for(var index = 0; index < task_queue.length; index++)  //iterate through the remaining tasks
+                            {
+                                var task = task_queue[index];
+                                setTimeout(callTaskCallback, 1, task, error);       //after a brief delay, give each of the callbacks an error
+                            }
+                            task_queue = [];                                        //empty the task queue
+                            processing_queue = false;                               //and we are done processing the queue
+                            return;                                                 //we are finished
+                        });
+                    }
+                }
             }
-            //otherwise...
-            else
+
+            //Puts a task on the queue to get the next X searchResults
+            function getNext(amount, callback)
             {
-                //save a copy of the current length
-                var previous_length = range.length;
+                task_queue.push({amount: amount, callback: callback});  //put the task on the task queue
 
-                //and get the next range of searchResults
-                result_set.getRange.promise({
-                    start: range_count*1000,
-                    end: (range_count + 1)*1000
-                })
-                .then(function(result_array)
+                setTimeout(function()                                   //after a brief timeout (in case there are multiple getNext() requests)...
                 {
-                    //update our counter and governance variables
-                    range_count++;
-
-                    //add those searchResults to our range
-                    range = range.concat(result_array);
-
-                    //if there aren't any more results we can get (<1000 means we are at the end)
-                    //then set our no_more_results flag and we are finished
-                    if(result_array.length < 1000)
+                    if(!processing_queue && task_queue.length > 0)      //if the queue isn't already started, and it needs to be started, start it
                     {
-                        no_more_results = true;
-                        return callback();
+                        processQueue();
                     }
-                    //otherwise if we have enough results to fill amount already, we can finish
-                    else if(range.length >= amount)
-                    {
-                        return callback();
-                    }
-                    //otherwise get some more results
-                    else
-                    {
-                        return getResults(amount, callback);
-                    }
+                }, 1)
+            }
 
-                })
-                .catch(function(error)
-                {
-                    //on errors, return back an error
-                    return callback(error);
-                });
+            //if we need to cancel the tasks and not call their callbacks, we can set this flag
+            function cancelAllTasks()
+            {
+                cancelled = true;
+            }
+
+            //these are the two functions our larger function will need access to
+            return {
+                getNext: getNext,
+                cancelAllTasks: cancelAllTasks
             }
         }
 
@@ -205,68 +266,78 @@ function async_search(arg1, arg2, arg3)
         */
 
         //Gets the next X searchResults
-        function getNext(amount, callback)
+        function getNext(arg1, arg2)
         {
-            //get those results and store them in range
-            getResults(amount, function(error)
+            if(!search_progress)                            //if we haven't started searching, start a search
             {
-                //if we have issues, throw an error
-                if(error)
+                search_progress = startSearch();
+            }
+
+            if(isNumber(arg1))                              //if we provide an amount
+            {
+                var amount = arg1;
+                var callback = arg2;
+                search_progress.getNext(amount, callback);  //then get the next amount of search results
+            }
+            else                                                            //if we don't provide an amount
+            {
+                var amount = 1;
+                var callback = arg1;
+                search_progress.getNext(1, function(error, searchResults)   //get the next value
                 {
-                    return callback(error);
-                }
-                //otherwise splice the results we need out of range and finish
-                else
-                {
-                    var to_return = range.splice(0,amount);
-                    return callback(null, to_return);
-                }
-            });
+                    if(error)
+                    {
+                        callback(error);                                    //pass errors up normally
+                    }
+                    else
+                    {
+                        callback(null, searchResults.shift())               //or if we get a search result, unpack it before passing it up
+                    }
+                });  //then get the next amount of search results
+            }
         }
 
         //Gets all the rest of the searchResults
         function getRest(callback)
         {
-            getNext(Number.MAX_SAFE_INTEGER, callback);
+            getNext(Number.MAX_SAFE_INTEGER, callback); //just get all the search results (there shouldn't be more than MAX_SAFE_INTEGER of them)
         }
 
         //Iterates through the remaining search results
-        function forEach(itemFunction, callback)
+        function forEach(giveItemToUser, callback)
         {
-            //gets 1000 searchResults (since that's an efficient number to use with getNext())
-            getNext(1000, function(err, results)
+            getNext(1000, function(err, results)        //gets 1000 searchResults (since that's an efficient number to use with getNext())
             {
-                //on error, throw an error
-                if(err)                      { return callback(err); }
-                //on lack of remaining results, we are finished
-                else if(results.length == 0) { return callback();    }
-                //otherwise iterate through the results and recursive call yourself
-                else
+                if(err)                      { return callback(err); }  //on error, throw an error
+                else if(results.length == 0) { return callback();    }  //on lack of remaining results, we are finished
+                else                                                    //otherwise iterate through the results
                 {
                     for(var index = 0; index < results.length; index++)
                     {
-                        itemFunction(results[index]);
+                        giveItemToUser(results[index]);                 //and give those items to the user   
                     }
-                    return forEach(itemFunction, callback);
+                    return forEach(giveItemToUser, callback);           //then recursively call yourself to get some more searchResults
                 }
             })
         }
 
         //A nice function to start the searchResults over from the beginning
-        function startOver()
+        function startOver(cancelAllTasks)
         {
-            range = undefined;
-            range_count = 0;
-            no_more_results = false;
-            result_set = undefined;
+            if(cancelAllTasks)                      //if we have been asked to cancel all tasks, cancel the tasks
+            {
+                search_progress.cancelAllTasks();
+            }
+            search_progress = startSearch();        //then restart the search
         }
 
         /*
             PUBLIC FUNCTIONS - Other
 
-            Just some other utilities that are available for useres but don't fit in any other category
+            Just some other utilities that are available for users but don't fit in any other category
         */
 
+        //a function we can use as a callback from of search.save.promise
         function saveWithCallback(callback)
         {
             our_search.save.promise()
