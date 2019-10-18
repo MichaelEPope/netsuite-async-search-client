@@ -264,6 +264,14 @@ search.callback.save(function(error, search_id)
 
 The results returned from your search are just the typical search results you get from Suitescript 2.0 searches.  If you are only familiar with Suitescript 1.0 searches, they have a slight difference when you call `result.getValue()`, but that's about it.
 
+```javascript
+//In Suitescript 2.0 (and the format you'd use with the results from this script)
+var tranid = search.getValue({name: 'tranid});
+
+//In Suitescript 1.0
+var tranid = serach.getValue('tranid');
+```
+
 ### Errors
 
 Errors are also pretty descriptive.  If you try to load a script that doesn't exist, it will throw.  If you run out of governance, it will throw.  Just be aware of those and you should be fine.
