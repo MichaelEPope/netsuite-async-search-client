@@ -15,7 +15,7 @@ This script does a few things:
 
 * Provides a wrapper which allows you to call Suitescript 2.0 methods from Suitescript 1.0.
 * Provides utility functions to makes dealing with the Suitescript 2.0 search API easier.
-* Performs prefetching of data so that your long searches don't take as long of a time (by default, tries to prefetch 1000).
+* Performs prefetching of data so that your long searches don't take as long of a time (by default, tries to be 1000 ahead of where you currently are in the search results).
 
 This script should work better than a *faceless Suitelet* because searches act differently when run in a server side Suitelet compared to how they act in a Client Script.
 
