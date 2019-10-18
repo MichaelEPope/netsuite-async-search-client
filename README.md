@@ -3,8 +3,6 @@
 
 A Netsuite client-side script that allows you to perform searches and field lookups without blocking up the UI.
 
-**This is a WIP module, so it might be wise to hold off on using it until I remove this message.**
-
 ## Why use this script?
 
 In Netsuite, running searches in client side scripts using `nlapiCreateSearch()` or `nlapiLookupField()` can be a problem.  Becuase the searches are blocking, the UI freezes up and your coworkers will complain.
@@ -13,7 +11,7 @@ Recently, Netsuite realeased Suitescript 2.0, which contained the capability to 
 
 ## How does it work?
 
-It's not very well known but it is possible to call Suitescript 2.0 methods from Suitescript 1.0.  This script wraps certain pieces of the Suitescript 2.0 API and also creates some helper functions to make things a bit less of a pain.  It's not perfect, but it's pretty good.
+It's not very well known but it is possible to call Suitescript 2.0 methods from Suitescript 1.0.  This script wraps certain pieces of the Suitescript 2.0 API to allow you to easily call them from Suitescript 1.0.  It also add some helper functions to make things easier, and performs prefetching so that your long searches don't take as long of a time.  It's not perfect, but it's pretty good.
 
 This is a better approach than using a *faceless Suitelet* because searches act slightly differently when run in a server side script.
 
@@ -171,8 +169,21 @@ search.addColumn({type: 'tranid'})
 Once your done setting up your search, you'll want to get data from it.  Here's how:
 
 ```javascript
-//Get the next X results (or less, if there aren't enough available)
+//Get the next X results (or less, if there aren't enough available) as an array
 //Useful when you want to proceed through the results in portions
+//If there are no searchResults left, it'll give you an empty array
+var amount = 30;
+search.getNext(amount, function(error, results)
+{
+	//if results.length is less than amount
+    	//then I've got all my search results
+})
+```
+
+```javascript
+//If you don't provide an amount to getNext(), it will get the next singular result for you
+//It'll also unpackage it, so you'll get it as a raw searchResult instead of an array
+//(If there are no searchResults left it'll give you undefined
 var amount = 30;
 search.getNext(amount, function(error, results)
 {
@@ -194,21 +205,35 @@ search.getRest(function(error, results)
 //Iterate through any remaining available results
 search.forEach(function(result)
 {
-	
+	//Iterate through each of the items with this function
 }, function(error)
 {
-	//If this is called with an error, the search errored out
-	//If it is called without an error, the search is finished
+	//Then this function is called when we are done
+	//If there's an error, the search errored out
+	//If there isn't, it finished with no issue.
 })
 ```
 
-A good thing to keep in mind, is that this module keeps track of where you are in the search.  This means that you can call  `search.getNext(30)` to get the first 30 results, and then later call `search.getRest()` to get everything *after those 30* (`search.forEach()` would also iterate through everything *after those 30*).
-
-If you want to start over at the first result, call the following:
+There are a few things to keep in mind about how this script gets results.  First off, the script keeps track of where you are in the searchResults.  This means each call to getNext proceeds from where the last one left off.  The second thing to keep in mind is that the search acts like a queue.  Each `getNext()`, or `getRest()` will execute in the order it is recieved:  It's perfectly okay to do something like this.
 
 ```javascript
-//resets the search so that the next result you get is the first one.
-search.startOver();
+search.getNext(30, console.log);	//get results index 0 -> 29
+search.getNext(40, console.log);	//then get results index 30 -> 69
+search.getNext(20, console.log);	//then get results index 70 -> 89
+search.getRest(console.log);		//then get results index 90 -> last result
+//calling search.getNext() or search.getRest() or search.forEach() after this point
+//wouldn't return anything because all search results have been consumed by search.getRest()
+```
+With `search.forEach()`, it internally uses `getNext()`, so be aware you might recieve some unexpected ordering if you use it conjunction with `getNext()` or `getRest()`.
+
+You can also restart the search from index 0 using this method:
+
+```javascript
+//resets the search so that the next result you get is index 0
+//in some cases, you'll want to prevent any queued callbacks from calling in the future
+//if you'd like to do that, pass in 'true' to startOver()
+var cancelCallbacks = true;
+search.startOver(cancelCallbacks);
 ```
 
 As mentioned earlier, you can check your governance as well:
@@ -219,7 +244,7 @@ As mentioned earlier, you can check your governance as well:
 var governance_left = search.getRemainingUsage()
 ```
 
-For saving data, search already has `search.save()` and `search.save.promise()`.  I've added one more for those of us who like callbacks.
+For saving data, search already has `search.save()` and `search.save.promise()`.  I've added another way to search for those of us who like callbacks.
 
 ```javascript
 //Just like search.save.promise() but using a callback
@@ -228,8 +253,6 @@ search.callback.save(function(error, search_id)
 
 })
 ```
-
-
 
 ### Results
 
@@ -261,10 +284,12 @@ A:  Not at the moment.  Perhaps in the future though.
 
 ## Future Plans
 
-1.  This module makes it harder to tell when your going to run out of governance, as you don't know when results are going to be gotten (especially if you are using `search.getNext()`).  Perhaps some functions could be used to signify that the next call will take you out of governance.  There also might be a way to make a function that "*just gets the data until you are out of governance*", so you don't have to do any checking.
-2. Promises if callbacks aren't provided.
+1.  This module makes it harder to tell when your going to run out of governance, as you don't know when results are going to be gotten internally.  It'd be nice if I added some way to turn on a safe mode where it would simply stop giving you results when you run out of governance, or something like that.  After all, running out of governance isn't an immediate error (this script does prefectching).  Not quite sure what would be best in this case.  Let me know what you guys think.
+2. It'd be nice to provide promises if callbacks aren't provided.  Or alternatively, to add a .promise property to the callback functions like the rest of Suitescript 2.0 uses.
 
 ## Changelog
+
+**10/18/2019** - Added prefetching and made it act more like a queue.  Added a callback form of `search.save.promise()`.  Added the capabilities to cancel callbacks since it's more like a queue now.
 
 **10/16/2019** - Made remainingUsage a function rather than a property.
 
