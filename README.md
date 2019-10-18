@@ -280,7 +280,7 @@ Errors are also pretty descriptive.  If you try to load a script that doesn't ex
 
 *Q:  My search is running slowly due to your script.  Can you speed it up?*
 
-A:  I can't.  This doesn't add much overhead to your search, it's probably just naturally slow (searches for some records are slower than others).  Reduce the data returned by the search by adding filters or using other techniques to simplify the search.
+A:  I can't.  This doesn't add much overhead to your search, it's probably just naturally slow (searches for some records are slower than others, especially those dealing with records older than a year).  Reduce the data returned by the search by adding filters or using other techniques to simplify the search.
 
 *Q:  I added the script to a page you asked and keep getting an error saying **async_search** is not defined.  What do I do?*
 
