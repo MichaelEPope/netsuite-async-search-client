@@ -9,11 +9,11 @@ In Netsuite, running searches in client side scripts using `nlapiCreateSearch()`
 
 Recently, Netsuite realeased Suitescript 2.0, which contained the capability to run asynchrnous searches.  This script brings the functionality you see in Suitescript 2.0 into Suitescript 1.0, so you can have awesome asynchronous searches and pretty looking code.
 
-## How does it work?
+## What does this script do?  And how does it work?
 
 This script does a few things:
 
-* Provides a wrapper which allows you to call Suitescript 2.0 methods from Suitescript 1.0.
+* Provides a wrapper which allows you to call Suitescript 2.0 methods from Suitescript 1.0 for both searches and lookups.
 * Provides utility functions to makes dealing with the Suitescript 2.0 search API easier.
 * Performs prefetching of data so that your long searches don't take as long of a time (by default, tries to be 1000 ahead of where you currently are in the search results).
 
