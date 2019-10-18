@@ -50,7 +50,7 @@ This is just a small sample of what can be done.  Take a look at the full API be
 
 ### global
 
-The below functions and properties are exposed as a global object (`async_search`).
+There are two function that are exposed to the global scope.  The first of them is (`async_search`).
 
 ```javascript
 //Similar to nlapiCreateSearch()
@@ -76,7 +76,7 @@ async_search('my_search_type', 'my_search_id', function(error, search)
 var governance_left = async_search.getRemainingUsage()
 ```
 
-In addition, there is a second global object exposed as (`async_lookup_field`).
+The second glboal function is (`async_lookup_field`):
 
 ```javascript
 //Similar to nlapiLookupField()
@@ -95,11 +95,11 @@ var governance_left = async_lookup_field.getRemainingUsage()
 
 ### search
 
-Gotten by calling `async_search()`.  `search` has some things you probably are familiar with:
+When you call `async_search()`, you get a `search` object.  `search` has many things you are familiar with if you are familiar with Suitescript 2.0:
 
 ```javascript
-//Has ALL of the Search.search methods from Suitescript 2.0
-//(because it IS a Search.search object)
+//Has all of the Search.search methods from Suitescript 2.0
+//(because it's just a Search.search object with extra properties and methods)
 var my_result_set = search.save()
 var search_id = search.run()
 var my_current_filters = search.filters
@@ -108,7 +108,8 @@ var my_current_filters = search.filters
 
 ```javascript
 //Has four of the Search utilty properties from Suitescript 2.0
-//(or you can go old school and use 'transaction' instead of search.Type.TRANSACTION)
+//You can also still use the strings you use in searches in Suitescript 1.0
+//(exe. using 'transaction' instead of search.Type.TRANSACTION)
 search.Operator.ANYOF
 search.Sort.ASC
 search.Summary.MIN
@@ -124,9 +125,11 @@ var setting = search.createSetting({name: 'consolidationtype', value: 'NONE'})
 
 //You can then assign these directly to the search object
 search.filters = [filter];
+search.columns = [column];
+search.settings = [settings];
 ```
 
-`search` also has some very nice utility functions:
+This script also adds some utility functions to `search`, that you won't find in Suitescript 2.0:
 
 ```javascript
 //Allows you to create a bunch of filters at once
@@ -173,9 +176,9 @@ search.addColumn({type: 'tranid'})
 Once your done setting up your search, you'll want to get data from it.  Here's how:
 
 ```javascript
-//Get the next X results (or less, if there aren't enough available) as an array
+//Get the next X results as an array (or less, if there aren't enough available)
+//If there are no results left, it'll give you an empty array
 //Useful when you want to proceed through the results in portions
-//If there are no searchResults left, it'll give you an empty array
 var amount = 30;
 search.getNext(amount, function(error, results)
 {
@@ -185,52 +188,51 @@ search.getNext(amount, function(error, results)
 ```
 
 ```javascript
-//If you don't provide an amount to getNext(), it will get the next singular result for you
-//It'll also unpackage it, so you'll get it as a raw searchResult instead of an array
-//(If there are no searchResults left it'll give you undefined
-var amount = 30;
-search.getNext(amount, function(error, results)
+//If you don't provide an amount to getNext(), it will get the next 1 result for you
+//It'll also unpackage it, so you'll get it as a raw result object instead of an array of result objects
+//If there are no results left it'll give you undefined
+search.getNext(function(error, result)
 {
-	//if results.length is less than amount
-    	//then I've got all my search results
+	//sweet!  results is just a singular search result, not an array
 })
 ```
 
 ```javascript
-//Gets any remaining available results
+//Gets all remaining results
 search.getRest(function(error, results)
 {
-	//For huge searches, this will take a long time
-    	//(Or run out of governance)
+	//For huge searches, this will take a long time (or run out of governance)
+	//But it's nice to not have to repetitively call getNext()
 })
 ```
 
 ```javascript
-//Iterate through any remaining available results
+//Iterate through all remaining results
 search.forEach(function(result)
 {
-	//Iterate through each of the items with this function
+	//For each of the remaining results, this function will be called
 }, function(error)
 {
-	//Then this function is called when we are done
-	//If there's an error, the search errored out
-	//If there isn't, it finished with no issue.
+	//If this function is called with an error,
+	//an error occured while iterating and the iterating stopped.
+	//If this function is called without an error,
+	//the iterating finished successfully
 })
 ```
 
-There are a few things to keep in mind about how this script gets results.  First off, the script keeps track of where you are in the searchResults.  This means each call to getNext proceeds from where the last one left off.  The second thing to keep in mind is that the search acts like a queue.  Each `getNext()`, or `getRest()` will execute in the order it is recieved:  It's perfectly okay to do something like this.
+There are a few things to keep in mind about how this script gets results.  First off, the script keeps track of where you are in the results.  This means each call to `getNext()` proceeds from where the last one left off.  The second thing to keep in mind is that the search acts like a queue.  Each `getNext()` will execute in the order it is recieved:  It's perfectly okay to do something like this.
 
 ```javascript
 search.getNext(30, console.log);	//get results index 0 -> 29
 search.getNext(40, console.log);	//then get results index 30 -> 69
 search.getNext(20, console.log);	//then get results index 70 -> 89
 search.getRest(console.log);		//then get results index 90 -> last result
-//calling search.getNext() or search.getRest() or search.forEach() after this point
-//wouldn't return anything because all search results have been consumed by search.getRest()
+//calling search.getNext() or search.getRest() or search.forEach() after this point wouldn't give
+//you any results in their callback because all search results have been consumed by search.getRest()
 ```
-With `search.forEach()`, it internally uses `getNext()`, so be aware you might recieve some unexpected ordering if you use it conjunction with `getNext()` or `getRest()`.
+`search.getRest()` and `search.forEach()` both internally use `search.getNext()`, so be aware you might recieve some unexpected ordering if you use either of them concurrently with each other or with `search.getNext()`. (to be safe, if you are going to use either, call them when your done using `search.getNext()` as is shown in the example above).
 
-You can also restart the search from index 0 using this method:
+You can also restart the search from index 0 if you'd like:
 
 ```javascript
 //resets the search so that the next result you get is index 0
@@ -248,7 +250,7 @@ As mentioned earlier, you can check your governance as well:
 var governance_left = search.getRemainingUsage()
 ```
 
-For saving data, search already has `search.save()` and `search.save.promise()`.  I've added another way to search for those of us who like callbacks.
+Finally, we have one last utility method.  For saving data, search already has `search.save()` and `search.save.promise()`.  I've added another way to save a search for those of us who like callbacks.
 
 ```javascript
 //Just like search.save.promise() but using a callback
