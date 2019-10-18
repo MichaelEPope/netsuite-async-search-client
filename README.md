@@ -269,7 +269,7 @@ The results returned from your search are just the typical search results you ge
 var tranid = search.getValue({name: 'tranid'});
 
 //In Suitescript 1.0
-var tranid = serach.getValue('tranid');
+var tranid = search.getValue('tranid');
 ```
 
 ### Errors
