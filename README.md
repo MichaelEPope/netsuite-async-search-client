@@ -81,7 +81,7 @@ In addition, there is a second global object exposed as (`async_lookup_field`).
 ```javascript
 //Similar to nlapiLookupField()
 //if you only want one field, use a single string instead of an array of strings for the fields
-async_lookup_field('my_search_type', 'record_id' ['some', 'fields', 'I', 'want'],
+async_lookup_field('my_search_type', 'record_id', ['some', 'fields', 'I', 'want'],
 function(error, results)
 {
     //sweet, I either have a result object or an array of result objects
