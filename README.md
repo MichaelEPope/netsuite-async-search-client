@@ -3,6 +3,8 @@
 
 A Netsuite client-side script that allows you to perform searches and field lookups without blocking up the UI.
 
+**This is a WIP module, so it might be wise to hold off on using it until I remove this message.**
+
 ## Why use this script?
 
 In Netsuite, running searches in client side scripts using `nlapiCreateSearch()` or `nlapiLookupField()` can be a problem.  Becuase the searches are blocking, the UI freezes up and your coworkers will complain.
