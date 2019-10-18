@@ -266,7 +266,7 @@ The results returned from your search are just the typical search results you ge
 
 ```javascript
 //In Suitescript 2.0 (and the format you'd use with the results from this script)
-var tranid = search.getValue({name: 'tranid});
+var tranid = search.getValue({name: 'tranid'});
 
 //In Suitescript 1.0
 var tranid = serach.getValue('tranid');
