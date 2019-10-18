@@ -282,7 +282,7 @@ Errors are also pretty descriptive.  If you try to load a script that doesn't ex
 
 A:  I can't.  This doesn't add much overhead to your search, it's probably just naturally slow (searches for some records are slower than others, especially those dealing with records older than a year).  Reduce the data returned by the search by adding filters or using other techniques to simplify the search.
 
-*Q:  I added the script to a page you asked and keep getting an error saying **async_search** is not defined.  What do I do?*
+*Q:  I added the script to a page you asked and keep getting an error saying **async_search** (or **async_lookup_field**) is not defined.  What do I do?*
 
 A:  Go to Customization -> Scripting -> Scripted Records.  Find the record you are working on and make sure that this script (or the regular script this script is a library for) is listed.  If not, fix that.  If it is listed, make sure that the execution order of the scripts allow **async_search** to be added to the page before you use it.  Otherwise, click Edit and reorder the scripts.
 
