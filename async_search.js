@@ -1,6 +1,6 @@
 /*
     Async Search (for Suitescript 1.0 Client Side Scripts)
-    Version 2.0.0
+    Version 2.1.0
 
     A module which allows us to easily perform an async search in SS 1.0.  See readme.md for details.
 */
