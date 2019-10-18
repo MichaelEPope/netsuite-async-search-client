@@ -1,6 +1,6 @@
 /*
     Async Search (for Suitescript 1.0 Client Side Scripts)
-    Version 2.1.0
+    Version 2.0.0
 
     A module which allows us to easily perform an async search in SS 1.0.  See readme.md for details.
 */
@@ -121,17 +121,9 @@ function async_search(arg1, arg2, arg3)
             }
         }
 
-        //Adds a filter description as a filters to the current search.  Syntactical sugar for concat()ing the results of createFilter()
-        function addFilter(filter)
-        {
-            addFilters([filter]);
-        }
-
-        //Adds a column descriptions as a column to the current search.  Syntactical sugar for concat()ing the results of createColumn()
-        function addColumn(column)
-        {
-            addColumns([column]);
-        }
+        //Syntatctical Sugar functions for adding a single filter or column.  They are the same as addFilters() and addColumns()
+        var addFilter = addFilters;
+        var addColumn = addColumns;
 
         /*
             LOCAL PRIVATE FUNCTIONS - Getting Results
