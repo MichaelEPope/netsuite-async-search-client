@@ -11,9 +11,13 @@ Recently, Netsuite realeased Suitescript 2.0, which contained the capability to 
 
 ## How does it work?
 
-It's not very well known but it is possible to call Suitescript 2.0 methods from Suitescript 1.0.  This script wraps certain pieces of the Suitescript 2.0 API to allow you to easily call them from Suitescript 1.0.  It also add some helper functions to make things easier, and performs prefetching so that your long searches don't take as long of a time.  It's not perfect, but it's pretty good.
+This script does a few things:
 
-This is a better approach than using a *faceless Suitelet* because searches act slightly differently when run in a server side script.
+* Provides a wrapper which allows you to call Suitescript 2.0 methods from Suitescript 1.0.
+* Provides utility functions to makes dealing with the Suitescript 2.0 search API easier.
+* Performs prefetching of data so that your long searches don't take as long of a time (by default, tries to prefetch 1000).
+
+This script should work better than a *faceless Suitelet* because searches act differently when run in a server side Suitelet compared to how they act in a Client Script.
 
 ## Usage
 
