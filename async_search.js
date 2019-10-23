@@ -1,6 +1,6 @@
 /*
     Async Search (for Suitescript 1.0 Client Side Scripts)
-    Version 2.0.0
+    Version 2.0.2
 
     A module which allows us to easily perform an async search in SS 1.0.  See readme.md for details.
 */
@@ -38,8 +38,15 @@ function async_search(arg1, arg2, arg3)
         We need the search (for search capabilities) and runtime (for governance information) modules.
     */
 
-    require(["N/search", "N/runtime"], function(search, runtime)
+    async_search._getSearchAndRuntime(function(search, runtime)
     {
+        /*
+            LOAD MODULES
+
+            We need to grab the search and runtime modules now that we have loaded them
+        */
+        var search = require("N/search");
+        var runtime = require("N/runtime");
 
         /*
             LOCAL PRIVATE VARIABLES
@@ -150,12 +157,14 @@ function async_search(arg1, arg2, arg3)
             //calls a task callback given a task and it's results
             function callTaskCallback(task, error, to_return)
             {
+                console.log('returning data');
                 task.callback(error, to_return);
             }
 
             //A function to process the tasks in our queue and give those tasks searchResults
             function processQueue()
             {
+                console.log('processing');
                 processing_queue = true;    //we are currently processing the queue
 
                 if(cancelled)               //on cancelled
@@ -200,6 +209,7 @@ function async_search(arg1, arg2, arg3)
                         })
                         .then(function(result_array)
                         {
+                            console.log('got data');
                             range_count++;                          //update our range counter
                             range = range.concat(result_array);     //add our results to our list of searchResults
 
@@ -260,6 +270,7 @@ function async_search(arg1, arg2, arg3)
         //Gets the next X searchResults
         function getNext(arg1, arg2)
         {
+            console.log('called getNext');
             if(!search_progress)                            //if we haven't started searching, start a search
             {
                 search_progress = startSearch();
@@ -292,6 +303,7 @@ function async_search(arg1, arg2, arg3)
         //Gets all the rest of the searchResults
         function getRest(callback)
         {
+            console.log('called getRest');
             getNext(Number.MAX_SAFE_INTEGER, callback); //just get all the search results (there shouldn't be more than MAX_SAFE_INTEGER of them)
         }
 
@@ -411,7 +423,7 @@ function async_search(arg1, arg2, arg3)
 //The async version of nlapiLookupField()
 function async_lookup_field(type, id, columns, callback)
 {
-    require(["N/search", "N/runtime"], function(search, runtime)
+    async_search._getSearchAndRuntime(function(search, runtime)
     {
         //Add getRemainingUsage() in the few places we want it
         var remainingUsage = runtime.getCurrentScript().getRemainingUsage();
@@ -439,3 +451,30 @@ async_search.remainingUsage = function()
     return 1000;
 }
 async_lookup_field.remainingUsage = async_search.remainingUsage;
+
+//Firefox tends to work no matter what when working with Suitescript 2.0 require
+//On ther other hand, Chorme will ony work after a short delay
+//So we need to have a function where we check a variable to see if that delay has already been observed
+//and then get the modules after a delay or get the modules immediately
+async_search._getSearchAndRuntime = function(callback)
+{
+    if(async_search._delay)
+    {
+        setTimeout(function()
+        {
+            delete async_search._delay;
+            require(["N/search", "N/runtime"], callback);
+        }, 100);
+    }
+    else
+    {
+        require(["N/search", "N/runtime"], callback);
+    }
+}
+
+//We also want to start the delay talked about above immediately
+async_search._delay = true;
+async_search._getSearchAndRuntime(function(search, runtime)
+{
+    //we don't need to do anything here
+});
