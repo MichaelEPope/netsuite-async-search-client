@@ -157,14 +157,12 @@ function async_search(arg1, arg2, arg3)
             //calls a task callback given a task and it's results
             function callTaskCallback(task, error, to_return)
             {
-                console.log('returning data');
                 task.callback(error, to_return);
             }
 
             //A function to process the tasks in our queue and give those tasks searchResults
             function processQueue()
             {
-                console.log('processing');
                 processing_queue = true;    //we are currently processing the queue
 
                 if(cancelled)               //on cancelled
@@ -209,7 +207,6 @@ function async_search(arg1, arg2, arg3)
                         })
                         .then(function(result_array)
                         {
-                            console.log('got data');
                             range_count++;                          //update our range counter
                             range = range.concat(result_array);     //add our results to our list of searchResults
 
@@ -270,7 +267,6 @@ function async_search(arg1, arg2, arg3)
         //Gets the next X searchResults
         function getNext(arg1, arg2)
         {
-            console.log('called getNext');
             if(!search_progress)                            //if we haven't started searching, start a search
             {
                 search_progress = startSearch();
@@ -303,7 +299,6 @@ function async_search(arg1, arg2, arg3)
         //Gets all the rest of the searchResults
         function getRest(callback)
         {
-            console.log('called getRest');
             getNext(Number.MAX_SAFE_INTEGER, callback); //just get all the search results (there shouldn't be more than MAX_SAFE_INTEGER of them)
         }
 
