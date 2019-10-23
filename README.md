@@ -303,6 +303,8 @@ A:  Not at the moment.  Perhaps in the future though.
 
 ## Changelog
 
+**10/23/2019** - Fixed some issues the script had in Chrome.  In Chrome, you have to delay for a short period before you can call `require()`, which proved to be a pain.
+
 **10/18/2019** - Added prefetching and made it act more like a queue.  Added a callback form of `search.save.promise()`.  Added the capabilities to cancel callbacks since it's more like a queue now.
 
 **10/16/2019** - Made remainingUsage a function rather than a property.
